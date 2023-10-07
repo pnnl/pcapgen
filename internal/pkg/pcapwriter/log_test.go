@@ -1,4 +1,4 @@
-package conversation
+package pcapwriter
 
 import (
 	"fmt"

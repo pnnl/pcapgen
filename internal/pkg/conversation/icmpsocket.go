@@ -8,6 +8,7 @@ import (
 	"github.com/google/gopacket/layers"
 )
 
+// ICMPSocket provides an ICMP
 type ICMPSocket struct {
 	*RawSocket
 	Packet layers.ICMPv4
@@ -52,8 +53,6 @@ func (s *ICMPSocket) Read(p []byte) (int, error) {
 	if err := packet.DecodeFromBytes(data, gopacket.NilDecodeFeedback); err != nil {
 		return 0, err
 	}
-
-	log.Print(data, packet)
 
 	s.Packet = *packet
 	return copy(p, packet.Contents), nil

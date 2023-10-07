@@ -1,10 +1,11 @@
-package conversation
+package pcapwriter
 
 import (
 	"bytes"
 	"io"
 	"testing"
 
+	"github.com/google/gopacket"
 	"github.com/google/gopacket/layers"
 )
 
@@ -21,7 +22,7 @@ func checkWrite(t *testing.T, w io.Writer, data []byte, c chan int) {
 
 const simpleMessage = "Good morning."
 
-func checkSimpleSocket(t *testing.T, alice Socket, bob Socket) {
+func checkSimpleSocket(t *testing.T, alice *Tap, bob *Tap) {
 	c := make(chan int)
 	buf := make([]byte, 40)
 	go checkWrite(t, alice, []byte(simpleMessage), c)
@@ -35,7 +36,7 @@ func checkSimpleSocket(t *testing.T, alice Socket, bob Socket) {
 
 func TestRawSocketSingle(t *testing.T) {
 	wbuf := new(bytes.Buffer)
-	alice, bob := NewRawSocketPair(wbuf)
+	alice, bob := NewTaps(wbuf, wbuf)
 
 	checkSimpleSocket(t, alice, bob)
 
@@ -47,16 +48,29 @@ func TestRawSocketSingle(t *testing.T) {
 }
 
 func TestICMPSocketSingle(t *testing.T) {
-	wbuf := new(bytes.Buffer)
-	alice, bob := NewICMPSocketPair(wbuf)
-	alice.Packet.TypeCode = layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoRequest, 0)
-	bob.Packet.TypeCode = layers.CreateICMPv4TypeCode(layers.ICMPv4TypeEchoReply, 0)
+	tapLog := new(Log)
+	alice, bob := NewICMPv4Taps(tapLog, 0x01, 0x40)
 
 	checkSimpleSocket(t, alice, bob)
 
-	if wbuf.String() == simpleMessage {
-		t.Errorf("recorded wrong bytes: %q", wbuf.Bytes())
+	// Decode the encoded packet to see if everything worked right
+	packet := gopacket.NewPacket(tapLog.Entries[0].Data, layers.LayerTypeEthernet, gopacket.Lazy)
+	t.Log(packet.String())
+	if ip := packet.NetworkLayer(); ip == nil {
+		t.Error("no network layer?")
+	} else if ip.NetworkFlow().Dst().String() != "192.168.1.1" {
+		t.Error("wrong dest IP")
 	}
+	if app := packet.ApplicationLayer(); app == nil {
+		t.Error("no application layer?")
+	} else if string(app.Payload()) != simpleMessage {
+		t.Errorf("wrong payload: %q", app.Payload())
+	}
+
 	alice.Close()
 	bob.Close()
+}
+
+func TestICMPConversation(t *testing.T) {
+	t.Fatal("XXX: Implement lag between utterances")
 }
