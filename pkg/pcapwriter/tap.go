@@ -24,7 +24,11 @@ func (s *Tap) Drop(calls int) {
 }
 
 func (s *Tap) Read(p []byte) (int, error) {
-	n, err := s.PeerReader.Read(p)
+	return s.PeerReader.Read(p)
+}
+
+func (s *Tap) Write(p []byte) (int, error) {
+	n, err := s.PeerWriter.Write(p)
 	if s.dropsLeft > 0 {
 		s.dropsLeft -= 1
 	} else if n > 0 {
@@ -33,10 +37,6 @@ func (s *Tap) Read(p []byte) (int, error) {
 		}
 	}
 	return n, err
-}
-
-func (s *Tap) Write(p []byte) (int, error) {
-	return s.PeerWriter.Write(p)
 }
 
 func (s *Tap) CloseWrite() error {

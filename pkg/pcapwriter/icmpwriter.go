@@ -2,7 +2,6 @@ package pcapwriter
 
 import (
 	"io"
-	"log"
 	"net"
 
 	"github.com/google/gopacket"
@@ -30,7 +29,6 @@ func (t *ICMPv4Writer) Write(p []byte) (int, error) {
 		gopacket.Payload(p),
 	)
 	t.ICMPv4.Seq += 1
-	log.Print(buf.Bytes())
 	return t.Writer.Write(buf.Bytes())
 }
 

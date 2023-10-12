@@ -43,7 +43,9 @@ func (pw *Writer) Write(frame []byte) (int, error) {
 		return 0, err
 	}
 
-	pw.Sleep(time.Duration(rand.Int63n(int64(pw.Jitter))))
+	if pw.Jitter > 0 {
+		pw.Sleep(time.Duration(rand.Int63n(int64(pw.Jitter))))
+	}
 
 	return len(frame), nil
 }
