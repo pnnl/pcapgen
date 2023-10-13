@@ -39,7 +39,7 @@ func usage() {
 	fmt.Fprintln(out, "# Client query (4 bytes)")
 	fmt.Fprintln(out, "C: 3e 29 008a")
 	fmt.Fprintln(out, "# Delay 12 seconds")
-	fmt.Fprintln(out, "Z: 12s")
+	fmt.Fprintln(out, "sleep: 12s")
 	fmt.Fprintln(out, "# Server response (2 bytes + 1 byte)")
 	fmt.Fprintln(out, "S: 7f c3")
 	fmt.Fprintln(out, "S: 04")
@@ -94,7 +94,7 @@ func main() {
 			} else {
 				srv.Write(buf)
 			}
-		case "Z":
+		case "sleep":
 			if d, err := time.ParseDuration(data); err != nil {
 				log.Fatal(err)
 			} else {

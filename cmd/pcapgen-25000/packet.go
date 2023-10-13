@@ -3,94 +3,51 @@ package main
 import (
 	"encoding/binary"
 	"errors"
+	"io"
 )
 
 var ByteOrder = binary.LittleEndian
 var ErrShortData = errors.New("short data")
 
-type Header struct {
-	Opcode  uint8
-	Session uint8
+var key = []byte{
+	0x70, 0x65, 0x67, 0x6d, 0x0a, 0x53, 0x45, 0x5f,
+	0x0a, 0x4d, 0x45, 0x5e, 0x0a, 0x43, 0x5e, 0x0b,
 }
 
-func (p *Header) MarshalBinary() ([]byte, error) {
-	data := make([]byte, 2)
-	data[0] = p.Opcode
-	data[1] = p.Session
-	return data, nil
-}
-
-func (p *Header) UnmarshalBinary(data []byte) error {
-	if len(data) < 2 {
-		return ErrShortData
+func encode(buf []byte) []byte {
+	obuf := make([]byte, len(buf))
+	for i, b := range buf {
+		m := key[i%len(key)]
+		obuf[i] = m ^ b
 	}
-	p.Opcode = data[0]
-	p.Session = data[1]
-	return nil
+	return obuf
 }
 
-type HandshakePacket struct {
-	Header
-	Payload []byte
+func header(opcode uint8, session uint8) []byte {
+	return []byte{opcode, 0, session, 0}
 }
 
-func (p *HandshakePacket) MarshalBinary() ([]byte, error) {
-	p.Opcode = 30
-	data, err := p.Header.MarshalBinary()
-	if err != nil {
-		return data, err
+func AckPacket() []byte {
+	buf := header(0, 0)
+	return encode(buf)
+}
+
+func XferBeginPacket(session uint8, size uint32, name string) []byte {
+	buf := header(1, session)
+	buf = ByteOrder.AppendUint32(buf, size)
+	buf = append(buf, uint8(len(name)))
+	buf = append(buf, []byte(name)...)
+	return encode(buf)
+}
+
+func XferPacket(session uint8, r io.Reader) ([]byte, error) {
+	buf := header(2, session)
+	payload := make([]byte, 500)
+	if n, err := r.Read(payload); err != nil {
+		return nil, err
+	} else {
+		buf = ByteOrder.AppendUint16(buf, uint16(n))
+		buf = append(buf, payload[:n]...)
 	}
-	return append(data, p.Payload...), nil
-}
-
-func (p *HandshakePacket) UnmarshalBinary(data []byte) error {
-	if err := p.UnmarshalBinary(data); err != nil {
-		return err
-	}
-	p.Payload = data[2:]
-	return nil
-}
-
-type FilenamePacket struct {
-	Header
-	FileSize uint32
-	Filename string
-}
-
-func (p *FilenamePacket) MarshalBinary() ([]byte, error) {
-	p.Opcode = 1
-	data, err := p.Header.MarshalBinary()
-	if err != nil {
-		return data, err
-	}
-	data = ByteOrder.AppendUint32(data, p.FileSize)
-	data = ByteOrder.AppendUint16(data, uint16(len(p.Filename)))
-	data = append(data, []byte(p.Filename)...)
-	return data, nil
-}
-
-func (p *FilenamePacket) UnmarshalBinary(data []byte) error {
-	if len(data) < 2+6 {
-		return ErrShortData
-	}
-	if err := p.Header.UnmarshalBinary(data); err != nil {
-		return err
-	}
-	p.FileSize = ByteOrder.Uint32(data[2:])
-	filenameLength := ByteOrder.Uint16(data[6:])
-	p.Filename = string(data[8 : 8+filenameLength])
-	return nil
-}
-
-type XferPacket struct {
-	Header
-	Length   uint32
-}
-
-func (p *FilenamePacket) MarshalBinary() ([]byte, error) {
-	data, err := p.Header.MarshalBinary()
-	if err != nil {
-		return data, err
-	}
-	if 
+	return encode(buf), nil
 }
