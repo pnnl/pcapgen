@@ -58,7 +58,31 @@ func TestICMPSocketSingle(t *testing.T) {
 	t.Log(packet.String())
 	if ip := packet.NetworkLayer(); ip == nil {
 		t.Error("no network layer?")
-	} else if ip.NetworkFlow().Dst().String() != "192.168.1.1" {
+	} else if ip.NetworkFlow().Dst().String() != "192.168.64.64" {
+		t.Error("wrong dest IP")
+	}
+	if app := packet.ApplicationLayer(); app == nil {
+		t.Error("no application layer?")
+	} else if string(app.Payload()) != simpleMessage {
+		t.Errorf("wrong payload: %q", app.Payload())
+	}
+
+	alice.Close()
+	bob.Close()
+}
+
+func TestUDPSocketSingle(t *testing.T) {
+	tapLog := new(Log)
+	alice, bob := NewUDPv4Taps(tapLog, 0x01, 0x40)
+
+	checkSimpleSocket(t, alice, bob)
+
+	// Decode the encoded packet to see if everything worked right
+	packet := gopacket.NewPacket(tapLog.Entries[0].Data, layers.LayerTypeEthernet, gopacket.Lazy)
+	t.Log(packet.String())
+	if ip := packet.NetworkLayer(); ip == nil {
+		t.Error("no network layer?")
+	} else if ip.NetworkFlow().Dst().String() != "192.168.64.64" {
 		t.Error("wrong dest IP")
 	}
 	if app := packet.ApplicationLayer(); app == nil {
