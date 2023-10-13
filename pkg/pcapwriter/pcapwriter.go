@@ -20,10 +20,10 @@ import (
 type Writer struct {
 	*pcapgo.Writer
 
-	/* Timestamp for next-emitted packet */
+	// Timestamp for next-emitted packet
 	Now time.Time
 
-	/* Upper limit on random time to add to each successive packet */
+	// Upper limit on random time to add to each successive packet
 	Jitter time.Duration
 }
 

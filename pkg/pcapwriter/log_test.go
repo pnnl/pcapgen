@@ -2,6 +2,7 @@ package pcapwriter
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 )
@@ -10,6 +11,10 @@ import (
 type LogEntry struct {
 	When time.Time
 	Data []byte
+}
+
+func (e *LogEntry) String() string {
+	return fmt.Sprintf("%s: %q", e.When, string(e.Data))
 }
 
 // Log provides an in-memory WriteSleeper interface
@@ -31,6 +36,14 @@ func (l *Log) Write(b []byte) (int, error) {
 // Sleep adds d to the internal clock
 func (l *Log) Sleep(d time.Duration) {
 	l.Now = l.Now.Add(d)
+}
+
+func (l *Log) String() string {
+	w := new(strings.Builder)
+	for _, e := range l.Entries {
+		fmt.Fprintln(w, e.String())
+	}
+	return w.String()
 }
 
 func TestLog(t *testing.T) {

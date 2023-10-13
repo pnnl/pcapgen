@@ -2,7 +2,10 @@ package pcapwriter
 
 import (
 	"bytes"
+	"fmt"
 	"io"
+	"log"
+	"sync"
 	"testing"
 
 	"github.com/google/gopacket"
@@ -32,6 +35,18 @@ func checkSimpleSocket(t *testing.T, alice *Tap, bob *Tap) {
 		t.Errorf("bad read: got %q", buf[0:n])
 	}
 	<-c
+}
+
+func sink(r io.Reader, wg *sync.WaitGroup) {
+	defer wg.Done()
+	buf := make([]byte, 4096)
+	for {
+		if _, err := r.Read(buf); (err == io.EOF) || (err == io.ErrClosedPipe) {
+			return
+		} else if err != nil {
+			log.Println("Read error:", err)
+		}
+	}
 }
 
 func TestRawSocketSingle(t *testing.T) {
@@ -95,6 +110,33 @@ func TestUDPSocketSingle(t *testing.T) {
 	bob.Close()
 }
 
-func TestICMPConversation(t *testing.T) {
-	t.Fatal("XXX: Implement lag between utterances")
+func TestDeferrals(t *testing.T) {
+	tapLog := new(Log)
+	alice, bob := NewTaps(tapLog, tapLog)
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
+	go sink(alice, wg)
+	go sink(bob, wg)
+
+	fmt.Fprint(alice, "1")
+	alice.Defer(1)
+	fmt.Fprint(alice, "2")
+	fmt.Fprint(alice, "3")
+
+	alice.Close()
+	bob.Close()
+	wg.Wait()
+
+	if len(tapLog.Entries) != 3 {
+		t.Fatal("Wrong number of log entries")
+	}
+	if tapLog.Entries[0].Data[0] != '1' {
+		t.Error("First packet wrong", tapLog.Entries[0].Data)
+	}
+	if tapLog.Entries[1].Data[0] != '3' {
+		t.Error("Second packet wrong", tapLog.Entries[0].Data)
+	}
+	if tapLog.Entries[2].Data[0] != '2' {
+		t.Error("Third packet wrong", tapLog.Entries[0].Data)
+	}
 }
