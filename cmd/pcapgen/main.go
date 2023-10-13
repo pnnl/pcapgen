@@ -47,6 +47,9 @@ func usage() {
 
 func main() {
 	flag.Usage = usage
+	useIcmp := flag.Bool("imcp", false, "Use ICMP instead of UDP")
+	srcN := flag.Uint("src", 11, "Value to use for src MAC address, IP address, and port")
+	dstN := flag.Uint("dst", 55, "Value to use for dst MAC address, IP address, and port")
 	flag.Parse()
 
 	begin := time.Date(2010, 2, 22, 22, 57, 23, 71877000, time.UTC)
@@ -56,7 +59,12 @@ func main() {
 	}
 	pcap.WriteStandardHeader()
 
-	cli, srv := pcapwriter.NewICMPv4Taps(pcap, 11, 55)
+	var cli, srv io.ReadWriteCloser
+	if *useIcmp {
+		cli, srv = pcapwriter.NewICMPv4Taps(pcap, uint8(*srcN), uint8(*dstN))
+	} else {
+		cli, srv = pcapwriter.NewUDPv4Taps(pcap, uint8(*srcN), uint8(*dstN))
+	}
 
 	wg := new(sync.WaitGroup)
 	wg.Add(2)
