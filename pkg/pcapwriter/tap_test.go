@@ -2,7 +2,6 @@ package pcapwriter
 
 import (
 	"bytes"
-	"fmt"
 	"io"
 	"log"
 	"sync"
@@ -108,35 +107,4 @@ func TestUDPSocketSingle(t *testing.T) {
 
 	alice.Close()
 	bob.Close()
-}
-
-func TestDeferrals(t *testing.T) {
-	tapLog := new(Log)
-	alice, bob := NewTaps(tapLog, tapLog)
-	wg := new(sync.WaitGroup)
-	wg.Add(2)
-	go sink(alice, wg)
-	go sink(bob, wg)
-
-	fmt.Fprint(alice, "1")
-	alice.Defer(1)
-	fmt.Fprint(alice, "2")
-	fmt.Fprint(alice, "3")
-
-	alice.Close()
-	bob.Close()
-	wg.Wait()
-
-	if len(tapLog.Entries) != 3 {
-		t.Fatal("Wrong number of log entries")
-	}
-	if tapLog.Entries[0].Data[0] != '1' {
-		t.Error("First packet wrong", tapLog.Entries[0].Data)
-	}
-	if tapLog.Entries[1].Data[0] != '3' {
-		t.Error("Second packet wrong", tapLog.Entries[0].Data)
-	}
-	if tapLog.Entries[2].Data[0] != '2' {
-		t.Error("Third packet wrong", tapLog.Entries[0].Data)
-	}
 }

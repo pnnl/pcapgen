@@ -33,6 +33,10 @@ func (l *Log) Write(b []byte) (int, error) {
 	return len(b), nil
 }
 
+func (l *Log) Close() error {
+	return nil
+}
+
 // Sleep adds d to the internal clock
 func (l *Log) Sleep(d time.Duration) {
 	l.Now = l.Now.Add(d)

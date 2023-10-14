@@ -90,14 +90,8 @@ func main() {
 		return
 	}
 
-	pcapfile, err := os.Create("25000.pcap")
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer pcapfile.Close()
-
 	begin := time.Date(2010, 2, 22, 22, 57, 23, 71877000, time.UTC)
-	pcap, err := pcapwriter.NewWriter(pcapfile, begin, 20*time.Millisecond)
+	pcap, err := pcapwriter.NewWriter(os.Stdout, begin, 20*time.Millisecond)
 	if err != nil {
 		log.Fatal(err)
 	}
